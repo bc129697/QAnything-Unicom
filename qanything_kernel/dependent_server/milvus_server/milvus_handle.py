@@ -38,8 +38,8 @@ def safe_get(req: Request, attr: str, default=None):
 
 milvus_logger.info("start connecting to Milvus")
 connections.connect("default", host=MILVUS_HOST_LOCAL, port=MILVUS_PORT)
-# milvus_client = MilvusClient("http://192.168.5.177:19540")
-# connections.connect("default", host="192.168.5.177", port="19540")
+# milvus_client = MilvusClient("http://192.168.5.145:19540")
+# connections.connect("default", host="192.168.5.145", port="19540")
 for con in connections.list_connections():
     addr = connections.get_connection_addr(con[0])
     milvus_logger.info(f"Connected to Milvus: {addr}")

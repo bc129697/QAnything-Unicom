@@ -59,10 +59,13 @@ db_config = {
 async def process_data(mysql_client, file_info, kb_name, time_record):    # async def process_data(retriever, milvus_kb, mysql_client, file_info, kb_name, time_record):
     insert_logger.info(f'Start insert file: {file_info}')
     _, file_id, user_id, file_name, kb_id, file_location, file_size, file_url, chunk_size, upload_infos = file_info
-    
+    # 获取知识库解析配置：parser_config
     parser_config = mysql_client.get_kb_parser_config(kb_id)
+    # 封装了 ElasticSearch（ES）操作的客户端类，提供全文索引、检索等功能,在 RAG 系统中，ES 通常用于存储文件的原始文本分片（全文索引,ES 用于关键词精确匹配），与 Milvus 的向量存储配合使用（向量用于语义检索）
     es_client = StoreElasticSearchClient()
+    # VectorStoreMilvusClient：封装了 Milvus 向量数据库操作的客户端类（前文解析过的核心类），负责文本向量化、向量存储、查询等
     milvus_kb = VectorStoreMilvusClient(parser_config)
+    # 创建一个综合检索器，协调向量数据库（Milvus）、关系数据库（MySQL）和全文搜索引擎（ES），实现 “文本分片→存储→检索” 的全流程管理
     retriever = ParentRetriever(milvus_kb, mysql_client, es_client, parser_config['separators'], parser_config['chunk_size'])
     
     parse_timeout_seconds = 900
@@ -83,15 +86,19 @@ async def process_data(mysql_client, file_info, kb_name, time_record):    # asyn
     # 这里是把文件做向量化，然后写入Milvus的逻辑
     start = time.perf_counter()
     try:
+        # 文件解析（分割为文档片段）
         await asyncio.wait_for(
             asyncio.to_thread(local_file.split_file_to_docs),
             timeout=parse_timeout_seconds
         )
         content_length = sum([len(doc.page_content) for doc in local_file.docs])
+        # 内容合法性校验:
+        # 若文件总字符数>MAX_CHARS（配置的最大长度），状态设为red，返回 “内容过长” 错误。
         if content_length > MAX_CHARS:
             status = 'red'
             msg = f"{file_name} content_length too large, {content_length} >= MaxLength({MAX_CHARS})"
             return status, content_length, chunks_number, msg
+        # 若字符数为 0，状态设为red，返回 “内容为空或 URL 反爬 / 需登录” 错误。
         elif content_length == 0:
             status = 'red'
             msg = f"{file_name} content_length is 0, file content is empty or The URL exists anti-crawling or requires login."
@@ -109,7 +116,7 @@ async def process_data(mysql_client, file_info, kb_name, time_record):    # asyn
         status = 'red'
         msg = f"split_file_to_docs error"
         return status, content_length, chunks_number, msg
-    
+    # 进度更新：解析开始后，更新 MySQL 中文件的msg字段为 “Processing: 1-5%”，向用户反馈进度
     end = time.perf_counter()
     time_record['parse_time'] = round(end - start, 2)
     insert_logger.info(f'parse time: {end - start} {len(local_file.docs)}')

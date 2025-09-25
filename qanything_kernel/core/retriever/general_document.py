@@ -666,7 +666,7 @@ class LocalFileForInsert:
         img_data = {
             "img64": base64.b64encode(img_np).decode("utf-8"),
         }
-
+        # 使用ocr的检测和识别
         result = get_ocr_result_sync(img_data)
         insert_logger.info(f"ocr result: {result}")
 
@@ -923,7 +923,7 @@ class LocalFileForInsert:
     def copy_images(image_root_path, output_dir):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        # 获取当前目录下所有jpg文件
+        # 获取当前目录下所有jpg文件（）
         images = [f for f in os.listdir(image_root_path) if f.endswith('.jpg')]
         # 复制到指定目录
         for image in images:
@@ -934,8 +934,10 @@ class LocalFileForInsert:
     @get_time
     def split_file_to_docs(self):
         insert_logger.info(f"start split file to docs, file_path: {self.file_name}")
+        # aq文档，则创建一个包含问答内容的文件
         if self.faq_dict:
             docs = [Document(page_content=self.faq_dict['question'], metadata={"faq_dict": self.faq_dict})]
+        # url文档，解析网页内容
         elif self.file_url:
             insert_logger.info("load url: {}".format(self.file_url))
             docs = self.url_to_documents(self.file_path, self.file_name, self.file_url)
@@ -948,6 +950,7 @@ class LocalFileForInsert:
                     insert_logger.error(f"newspaper get url error: {self.file_url}, {traceback.format_exc()}")
                     loader = MyRecursiveUrlLoader(url=self.file_url)
                     docs = loader.load()
+        # Markdown文档，尝试convert_markdown_to_langchaindoc转换， 失败则用UnstructuredFileLoader
         elif self.file_path.lower().endswith(".md"):
             try:
                 docs = convert_markdown_to_langchaindoc(self.file_path)
@@ -957,6 +960,7 @@ class LocalFileForInsert:
                     f"convert_markdown_to_langchaindoc error: {self.file_path}, {traceback.format_exc()}")
                 loader = UnstructuredFileLoader(self.file_path, strategy="fast")
                 docs = loader.load()
+        # txt文档，读取文本内容并根据[chunk-split]标记分割
         elif self.file_path.lower().endswith(".txt"):
             page_content = open(self.file_path, 'r', encoding='utf-8').read()
             chunk_state = "[chunk-split]" in page_content
@@ -966,7 +970,7 @@ class LocalFileForInsert:
                 if page_chunk:
                     docs.append(Document(page_content=page_chunk, metadata={"single_parent":chunk_state}))
                     
-
+        # pdf文档，使用get_pdf_chunk_result_sync进行分块处理
         elif self.file_path.lower().endswith(".pdf"):
             # markdown_file = get_pdf_result_sync(self.file_path)
             # if markdown_file:
@@ -982,6 +986,7 @@ class LocalFileForInsert:
             
             insert_logger.info("use pdf chunk")
             docs = get_pdf_chunk_result_sync(self.file_path, self.chunk_size)
+            # 失败时使用UnstructuredPaddlePDFLoader作为备选
             if docs is None:
                 insert_logger.warning(
                     f'Error in Powerful PDF parsing, use fast PDF parser instead.')
@@ -990,11 +995,13 @@ class LocalFileForInsert:
             images_dir = os.path.join(IMAGES_ROOT_PATH, self.file_id)
             self.copy_images(os.path.dirname(self.file_path), images_dir)
             insert_logger.info(f"pdf load docs sucess")
+        # 图像文件，通过 OCR 识别图片中的文本
         elif self.file_path.lower().endswith(".jpg") or self.file_path.lower().endswith(
                 ".png") or self.file_path.lower().endswith(".jpeg"):
             txt_file_path = self.image_ocr_txt(filepath=self.file_path)
             loader = TextLoader(txt_file_path, autodetect_encoding=True)
             docs = loader.load()
+        # DOCX 文档处理，使用get_docx_result_sync处理，失败时使用docx2txt作为备选，处理文档中的图片
         elif self.file_path.lower().endswith(".docx"):
             try:
                 save_image_path = os.path.dirname(self.file_path)
@@ -1004,6 +1011,7 @@ class LocalFileForInsert:
                 insert_logger.warning('Error in Powerful Word parsing, use docx2txt instead.')
                 text = docx2txt.process(self.file_path)
                 docs = [Document(page_content=text)]
+        # XLSX 文档处理,遍历 Excel 的每个工作表进行处理
         elif self.file_path.lower().endswith(".xlsx"):
             try:
                 docs = []
@@ -1014,7 +1022,7 @@ class LocalFileForInsert:
             except Exception as e:
                 insert_logger.warning(f'Error in Powerful Excel parsing, {self.file_path}')
                 insert_logger.error(e)
-                
+        # 其他格式,对 PPTX、EML、CSV 等格式提供了相应的加载器,不支持的格式会抛出类型错误      
         elif self.file_path.lower().endswith(".pptx"):
             loader = UnstructuredPowerPointLoader(self.file_path, strategy="fast")
             docs = loader.load()

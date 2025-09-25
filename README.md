@@ -1,6 +1,6 @@
 <div align="center"  style="background-color: black; padding: 20px;">
 
-  <a href="http://192.168.5.177:8777/qanything/">
+  <a href="http://192.168.5.145:8777/qanything/">
     <!-- Please provide path to your logo here -->
     <img src="qanything_kernel/qanything_server/dist/qanything/assets/logo-rag.png" alt="Logo" width="911" height="175">
   </a>

@@ -128,7 +128,12 @@ class SelfMilvus(Milvus):
             raise e
 
     def get_expr_result(self, expr: str, output_fields: List[str]) -> List[int] | None:
-        """Get query result with expression
+        """
+        通过 Milvus 的表达式查询功能，按条件获取指定字段的结果（如 “查询 kb_id=xxx 的所有向量的 doc_id”）：
+        输入：查询表达式（如 kb_id == 'kb123'）、需要返回的字段列表（如 ['doc_id', 'text']）；
+        输出：符合条件的记录列表，便于业务层后续处理（如统计某知识库的向量数量）
+        
+        Get query result with expression
 
         Args:
             expr: Expression - E.g: "id in [1, 2]", or "title LIKE 'Abc%'"
@@ -152,7 +157,7 @@ class SelfMilvus(Milvus):
             debug_logger.error("Failed to get ids: %s error: %s", self.collection_name, exc)
             raise exc
         return query_result
-
+    #异步文本向量插入（aadd_texts）
     async def aadd_texts(
             self,
             texts: Iterable[str],
@@ -178,8 +183,10 @@ class SelfMilvus(Milvus):
         # Assuming self.embedding_func has an async method embed_documents_async
         embedding_start = time.perf_counter()
         try:
+            # 优先调用嵌入模型的异步方法 aembed_documents（批量嵌入，效率高）；
             embeddings = await self.embedding_func.aembed_documents(texts)
         except NotImplementedError:
+            # 若模型不支持异步，则通过列表推导式调用 aembed_query（单条嵌入，兼容性强）
             embeddings = [await self.embedding_func.aembed_query(x) for x in texts]
         time_record['milvus_embedding_time'] = round(time.perf_counter() - embedding_start, 2)
 
@@ -188,6 +195,7 @@ class SelfMilvus(Milvus):
             return []
 
         # If the collection hasn't been initialized yet, perform all steps to do so
+        # 集合初始化检查：若集合未创建（self.col 为空），调用 self._init 初始化集合（内部会调用 _create_collection）
         if not isinstance(self.col, Collection):
             kwargs = {"embeddings": embeddings, "metadatas": metadatas}
             if self.partition_names:
@@ -199,14 +207,15 @@ class SelfMilvus(Milvus):
             self._init(**kwargs)
 
         # Dict to hold all insert columns
+        # 构造插入数据，基础字段：text（原始文本）、vector（嵌入向量）
         insert_dict: dict[str, list] = {
             self._text_field: texts,
             self._vector_field: embeddings,
         }
-
+        # 主键字段：若 auto_id=False，需传入 ids 列表，手动指定主键；
         if not self.auto_id:
             insert_dict[self._primary_field] = ids
-
+        # 元数据字段：若指定 _metadata_field，则将元数据列表存入该字段；否则按键值对分别存入对应字段。
         if self._metadata_field is not None:
             for d in metadatas or []:
                 insert_dict.setdefault(self._metadata_field, []).append(d)
@@ -231,6 +240,7 @@ class SelfMilvus(Milvus):
 
         insert_start = time.perf_counter()
         assert isinstance(self.col, Collection)
+        # 批量插入
         for i in range(0, total_count, batch_size):
             # Grab end index
             end = min(i + batch_size, total_count)
@@ -255,7 +265,7 @@ class SelfMilvus(Milvus):
 
         time_record['milvus_insert_time'] = round(time.perf_counter() - insert_start, 2)
 
-        # asyncio.create_task(asyncio.to_thread(self.col.flush))
+        # asyncio.create_task(asyncio.to_thread(self.col.flush))插入完成后检查是否满足刷新条件，满足则调用 _milvus_flush 执行刷新
         if self._should_flush():
             flush_start = time.perf_counter()
             self._milvus_flush()
@@ -267,6 +277,8 @@ class SelfMilvus(Milvus):
 
     def update_kb_id_for_file_id(self, file_id: str, new_kb_id: str):
         """
+        业务中 “文件从 A 知识库移动到 B 知识库” 时，需更新 Milvus 中对应向量的 kb_id 字段，该方法实现指定文件 ID 的所有向量的知识库 ID 更新
+
         简化版更新指定file_id记录的kb_id属性
         
         Args:
@@ -361,6 +373,8 @@ class SelfMilvus(Milvus):
     
     def copy_kb_id_for_file_id(self, file_id: str, new_kb_id: str):
         """
+        与 update_kb_id_for_file_id 类似，但不删除旧记录，仅复制一份新记录并更新 kb_id（业务中 “文件复制到另一知识库” 场景）
+
         简化版更新指定file_id记录的kb_id属性
         
         Args:

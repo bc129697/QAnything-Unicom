@@ -1162,7 +1162,7 @@ curl --location 'http://{ip}:{port}/api/rag/query_rewrite' \
     "history": [
         ["北京明天出门需要带伞吗？","今天北京的天气是全天阴，气温19摄氏度到27摄氏度，因此不需要带伞噢。"]
     ],
-    "api_base": "http://192.168.5.177:8000/v1", 
+    "api_base": "http://192.168.5.145:8000/v1", 
     "api_key": "sk-b155e575ea1542cba4f4a0ea28075236",
     "model_name": "Qwen2.5-7B-Instruct"   
 }'
@@ -1569,7 +1569,7 @@ curl --location 'http://{ip}:{port}/api/get_websearch_tools'
 **请求示例**:
 ```bash
 curl -X POST -H "Content-Type: application/json" http://ip:port/api/chunk_summary \
-    -d '{"user_id": "zzp", "file_id": "8591b31075194422b011993e3b75ae15", "api_base": "http://192.168.5.177:8000/v1", "api_key": "sk-b155e575ea1542cba4f4a0ea28075236", "model_name": "Qwen2.5-7B-Instruct", "keywords_num": 2, "qa_num": 2, "save_summary": true}'
+    -d '{"user_id": "zzp", "file_id": "8591b31075194422b011993e3b75ae15", "api_base": "http://192.168.5.145:8000/v1", "api_key": "sk-b155e575ea1542cba4f4a0ea28075236", "model_name": "Qwen2.5-7B-Instruct", "keywords_num": 2, "qa_num": 2, "save_summary": true}'
 ```
 
 **返回示例**:
@@ -1673,7 +1673,7 @@ curl -X POST -H "Content-Type: application/json" http://ip:port/api/chunk_summar
 **请求示例**:
 ```bash
 curl -X POST -H "Content-Type: application/json" http://ip:port/api/file_extract_outline \
-    -d '{"user_id": "zzp", "file_id": "8591b31075194422b011993e3b75ae15", "api_base": "http://192.168.5.177:8000/v1", "api_key": "sk-b155e575ea1542cba4f4a0ea28075236", "model_name": "Qwen2.5-7B-Instruct"}'
+    -d '{"user_id": "zzp", "file_id": "8591b31075194422b011993e3b75ae15", "api_base": "http://192.168.5.145:8000/v1", "api_key": "sk-b155e575ea1542cba4f4a0ea28075236", "model_name": "Qwen2.5-7B-Instruct"}'
 ```
 
 **返回示例**:
@@ -1716,7 +1716,7 @@ curl -X POST -H "Content-Type: application/json" http://ip:port/api/file_extract
 **请求示例**:
 ```bash
 curl -X POST -H "Content-Type: application/json" http://ip:port/api/file_extract_summary \
-    -d '{"user_id": "zzp", "file_id": "8591b31075194422b011993e3b75ae15", "api_base": "http://192.168.5.177:8000/v1", "api_key": "sk-b155e575ea1542cba4f4a0ea28075236", "model_name": "Qwen2.5-7B-Instruct"}'
+    -d '{"user_id": "zzp", "file_id": "8591b31075194422b011993e3b75ae15", "api_base": "http://192.168.5.145:8000/v1", "api_key": "sk-b155e575ea1542cba4f4a0ea28075236", "model_name": "Qwen2.5-7B-Instruct"}'
 ```
 
 **返回示例**:
@@ -1907,7 +1907,7 @@ curl -X POST -H "Content-Type: application/json" http://ip:port/api/rag/get_bot_
                 "测试_摘要"
             ],
             "update_time": "2025-09-02 15:22:10",
-            "llm_setting": "{\"api_base\": \"http://192.168.5.177:8000/v1/\", \"api_key\": \"xxxxx\", \"api_context_length\": 4096, \"top_p\": 1, \"top_k\": 30, \"chunk_size\": 800, \"temperature\": 0.5, \"model\": \"Qwen3-30B-3B\", \"max_token\": 512, \"networking\": false, \"only_need_search_results\": true}"
+            "llm_setting": "{\"api_base\": \"http://192.168.5.145:8000/v1/\", \"api_key\": \"xxxxx\", \"api_context_length\": 4096, \"top_p\": 1, \"top_k\": 30, \"chunk_size\": 800, \"temperature\": 0.5, \"model\": \"Qwen3-30B-3B\", \"max_token\": 512, \"networking\": false, \"only_need_search_results\": true}"
         }
     ]
 }

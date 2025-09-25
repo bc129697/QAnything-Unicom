@@ -708,7 +708,7 @@ class OCRQAnything(object):
         start = time.time()
         ori_im = img.copy()
 
-        # 首先对图像进行预处理，确保图像尺寸适合检测模型
+        # 1. 图像预处理：大图像缩放到最小边960（避免尺寸过大）
         scale = 1.0
         if img.shape[0] > 960 and img.shape[1] > 960:
             # 将图像缩放到最小边为960
@@ -717,8 +717,9 @@ class OCRQAnything(object):
             new_width = int(img.shape[1] * scale)
             img = cv2.resize(img, (new_width, new_height))
         
-
+         # 2. 图像分割（长条形图像）
         img_list, state_axis = self.split_image(img)
+        # 3. 文本检测（分离子图→检测→合并框→去重）
         if len(img_list) > 1:
             logging.info(f"Split image into {len(img_list)} parts for detection. state_axis: {state_axis}")
             dt_boxes_list = []
@@ -730,6 +731,7 @@ class OCRQAnything(object):
                 if dt_boxes is not None:
                     dt_boxes_int32 = [np.array(box, dtype=np.int32) for box in dt_boxes]
                     cv2.polylines(img_crop, dt_boxes_int32, True, (0, 255, 0), 2)
+                    # 还原框坐标到原始图像（考虑分割偏移）
                     for dt_box in dt_boxes:
                         for point in dt_box:
                             if state_axis == 1:
@@ -739,7 +741,7 @@ class OCRQAnything(object):
                     dt_boxes_list.extend(dt_boxes)
                 # cv2.imwrite(f"ocr_debug_{index}.jpg", img_crop)
             # dt_boxes = np.array(dt_boxes_list, dtype=np.float32) #dt_boxes = dt_boxes_list
-            # 对 dt_boxes_list 进行 IoU 过滤
+            # 对 dt_boxes_list 进行 IoU 过滤, 去重
             dt_boxes_filtered = self.filter_boxes_by_iou(dt_boxes_list, iou_threshold=0.01)
 
             # 更新 dt_boxes
@@ -748,6 +750,7 @@ class OCRQAnything(object):
             # dt_boxes_int32 = [np.array(box, dtype=np.int32) for box in dt_boxes]
             # cv2.polylines(img, dt_boxes_int32, True, (0, 255, 0), 2)
             # cv2.imwrite("ocr_debug_final.jpg", img)
+        # 非分割图像直接检测
         else:
             dt_boxes, elapse = self.text_detector(img)
             time_dict['det'] = elapse
@@ -759,20 +762,20 @@ class OCRQAnything(object):
         else:
             dt_boxes /= scale  # 恢复原始图像的缩放比例
         img_crop_list = []
-
-        dt_boxes = self.sorted_boxes(dt_boxes)
+        # 4. 文本区域裁剪（原始图像上裁剪，确保精度）
+        dt_boxes = self.sorted_boxes(dt_boxes) # 文本框排序（从上到下、从左到右）
 
         for bno in range(len(dt_boxes)):
             tmp_box = copy.deepcopy(dt_boxes[bno])
             img_crop = self.get_rotate_crop_image(ori_im, tmp_box)
             img_crop_list.append(img_crop)
-
+        # 5. 文本识别（批量识别裁剪后的文本区域）
         rec_res, elapse = self.text_recognizer(img_crop_list)
 
         time_dict['rec'] = elapse
         # cron_logger.debug("rec_res num  : {}, elapsed : {}".format(
         #     len(rec_res), elapse))
-
+        # 6. 过滤低置信度结果（置信度<0.5的结果丢弃）
         filter_boxes, filter_rec_res = [], []
         for box, rec_result in zip(dt_boxes, rec_res):
             text, score = rec_result
@@ -781,7 +784,7 @@ class OCRQAnything(object):
                 filter_rec_res.append(rec_result)
         end = time.time()
         time_dict['all'] = end - start
-        return [item[0] for item in list(filter_rec_res)]
+        return [item[0] for item in list(filter_rec_res)]  # 返回最终识别的文字列表
 
 
 if __name__ == '__main__':

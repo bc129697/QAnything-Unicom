@@ -34,6 +34,7 @@ RAG_SERVER_WORKERST      = 1
 # 获取项目根目录，获取当前脚本的绝对路径，设置模型路径和保存文件路径
 current_script_path = os.path.abspath(__file__)
 root_path = os.path.dirname(os.path.dirname(os.path.dirname(current_script_path)))
+print(f"root_path: {root_path}")
 UPLOAD_ROOT_PATH = os.path.join(root_path, "QANY_DB", "content")
 IMAGES_ROOT_PATH = os.path.join(root_path, "QANY_DB", "file_images")
 OCR_MODEL_PATH = os.path.join(root_path, "rag_models", "ocr_models")

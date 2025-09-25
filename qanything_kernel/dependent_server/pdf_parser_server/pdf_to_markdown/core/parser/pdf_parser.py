@@ -362,7 +362,9 @@ class HuParser:
             self.mean_height[-1] = np.median([b["bottom"] - b["top"]
                                               for b in bxs])
         self.boxes.append(bxs)
-
+    
+    # 布局分析算法，比如：文本块（text）、标题（title）、表格（table）、图片（figure）、公式（equation）,
+    # 记录每个元素的坐标（x0/x1/top/bottom）、所属页码（reference），存入 self.boxes 列表。
     def _layouts_rec(self, ZM, drop=True):
         assert len(self.page_images) == len(self.boxes)
         self.boxes, self.page_layout = self.layouter(
@@ -440,7 +442,7 @@ class HuParser:
                 self.page_cum_height[self.boxes[i]["page_number"] - 1]
             self.boxes[i]["bottom"] += \
                 self.page_cum_height[self.boxes[i]["page_number"] - 1]
-
+    # 合并 PDF 布局分析中识别到的零散文本块，确保文本内容的连贯性（例如修复因换行、分栏或格式问题导致的文本断裂）
     def _text_merge(self):
         # merge adjusted boxes
         bxs = self.boxes

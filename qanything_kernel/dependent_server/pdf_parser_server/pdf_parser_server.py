@@ -65,7 +65,7 @@ async def pdf_parser(request: Request):
 
     return json({"markdown_file": markdown_file})
 
-
+# PDF解析服务
 @app.post("/pdfparser_chunk")
 async def pdf_parser_chunk(request: Request):
     filename = safe_get(request, 'filename')

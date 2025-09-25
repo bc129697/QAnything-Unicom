@@ -93,9 +93,9 @@ source .env
 
 # 检查操作系统类型，cpu类型，启动不同版本的docker compose文件
 if [ -e /proc/version ]; then
-  if grep -qi microsoft /proc/version || grep -qi MINGW /proc/version; then
-    # 不支持Windows
-    echo "当前版本不支持Windows，请在Linux环境下运行此脚本"
+  if grep -qi MINGW /proc/version; then
+    echo "当前版本不支持 Windows，请在 Linux 环境下运行此脚本"
+    exit 1
   else
     echo "Running under native Linux"
 

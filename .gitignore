@@ -1,0 +1,14 @@
+.venv
+.vscode
+.idea
+__pycache__
+QANY_DB
+qanything_logs
+debug_logs
+qa_logs
+*.lock
+*.log
+clash-for-linux-master/
+logs
+rag_models
+retrieval_record
